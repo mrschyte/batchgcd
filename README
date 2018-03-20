@@ -1,0 +1,4 @@
+Try to factorize SSL certificates using the fast batchgcd algorithm by DJB.
+
+The program expects certificates in base64 DER encoded form, one each line.
+The output is the certificate and retrieved private key for cracked certs.
