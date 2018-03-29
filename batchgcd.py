@@ -49,7 +49,7 @@ def batchgcd(xs):
         if x != xs[k]: # success
             yield x
         else: # fallback
-            for d in (fractions.gcd(x, y) for y in xs):
+            for d in (gmpy2.gcd(x, y) for y in xs):
                 if d != 1:
                     yield x // d
                     break
