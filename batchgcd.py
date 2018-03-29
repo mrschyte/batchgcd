@@ -29,7 +29,6 @@ def batchgcd(xs):
         tree = [xs]
         while len(xs) > 1:
             LOGGER.info('Calculating product tree: %10d' %(len(xs)))
-            #xs = [calculate_product(xs[k * 2 : (k + 1) * 2]) for k in range((len(xs) + 1)//2)]
             xs = pool.map(calculate_product, [xs[k * 2 : (k + 1) * 2] for k in range((len(xs) + 1)//2)]) 
             tree.append(xs)
         return tree
@@ -40,7 +39,6 @@ def batchgcd(xs):
         while tree:
             LOGGER.info('Calculating batch GCDs:   %10d' %(len(tree)))
             xs = tree.pop()
-            #rems = [rems[i//2] % xs[i]**2 for i in range(len(xs))]
             rems = pool.map(calculate_r_mod_xsqr, [(rems[i//2], xs[i]) for i in range(len(xs))])
         for r, n in zip(rems, xs):
             yield gmpy2.gcd(r//n, n)
