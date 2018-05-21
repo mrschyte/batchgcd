@@ -15,21 +15,19 @@ from base64 import b64decode
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('batchgcd')
 
-def calculate_r_mod_xsqr(params):
-    r, x = params
-    return r % x**2
-
-def calculate_product(xs):
-    return functools.reduce(lambda x, y: x * y, xs)
-
 def batchgcd(xs):
-    pool = Pool(processes=cpu_count())
-    def _product_tree(xs):
+    def _product(xs, a, b):
+        p = gmpy2.mpz(1)
+        for k in range(a, min(len(xs), b)):
+            p = gmpy2.mul(p, xs[k])
+        return p
 
+    def _product_tree(xs):
         tree = [xs]
         while len(xs) > 1:
             LOGGER.info('Calculating product tree: %10d' %(len(xs)))
-            xs = pool.map(calculate_product, [xs[k * 2 : (k + 1) * 2] for k in range((len(xs) + 1)//2)]) 
+            xs = [_product(xs, k * 2, (k + 1) * 2)
+                for k in range((len(xs) + 1)//2)]
             tree.append(xs)
         return tree
 
@@ -39,18 +37,24 @@ def batchgcd(xs):
         while tree:
             LOGGER.info('Calculating batch GCDs:   %10d' %(len(tree)))
             xs = tree.pop()
-            rems = pool.map(calculate_r_mod_xsqr, [(rems[i//2], xs[i]) for i in range(len(xs))])
-        for r, n in zip(rems, xs):
-            yield gmpy2.gcd(r//n, n)
+            rems = [gmpy2.mod(rems[i//2], gmpy2.mul(xs[i], xs[i]))
+                    for i in range(len(xs))]
+        return [gmpy2.gcd(gmpy2.t_div(r, n), n)
+                for r, n in zip(rems, xs)]
 
-    for k, x in enumerate(_batchgcd(xs)):
-        if x != xs[k]: # success
+    result = _batchgcd(xs)
+    for i, x in enumerate(result):
+        if x != xs[i]: # success
             yield x
         else: # fallback
-            for d in (gmpy2.gcd(x, y) for y in xs):
+            # only check where bgcd != 1 and x != y
+            for d in (gmpy2.gcd(x, y) for j, y in enumerate(result)
+                      if xs[j] != 1 and x != y):
                 if d != 1:
-                    yield x // d
+                    yield d
                     break
+            else:
+                yield 1
 
 def load_single_certificate(data):
     try:
